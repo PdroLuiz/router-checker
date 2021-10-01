@@ -36,9 +36,47 @@ export interface BodyCheckerOption {
     validator?: (param : any) => boolean;
 }
 
+function CheckBody(body : any, option : BodyChecker, errors : Array<string>) {
+    Object.keys(option).forEach(key => {
+        
+        const Property2Check = option[key];
+        const Property = body[key];
 
+        if (!Property2Check.nullable && Property == null) {
+            errors.push(`missing property "${key}" in body request`);
+        }
 
+        const propertyType = typeof Property;
 
+        if (["string", "number", "boolean"].includes(propertyType)) {
+            if (Property2Check.type === "date") {
+                isNaN(Date.parse(Property)) && errors.push(`property "${key}" expected type ${Property2Check.type} but got invalid date at body request`);
+            } else {
+                propertyType != Property2Check.type && errors.push(`property "${key}" expected type ${Property2Check.type} but got type ${propertyType} at body request`);
+            }
+        }
+
+        if (propertyType === "object") {
+            switch (Property2Check.type) {
+                case "list": {
+                    !(Property instanceof Array) && errors.push(`property "${key}" expected type ${Property2Check.type} but got type ${propertyType} at body request`);
+                    break;
+                }
+                default: {
+                    Property2Check.type instanceof Object && CheckBody(Property, Property2Check.type, errors);
+                    break;
+                }
+            }
+        }
+
+        
+
+        if (Property2Check.validator) {
+            // checks if property exists
+            Property && !Property2Check.validator(Property) && errors.push(`property "${key}" failed at validator function at body request`);
+        }
+    })
+}
 
 export function Check(params : Checker) {
     return (req : Request, res : Response, next : NextFunction) => {
@@ -46,43 +84,7 @@ export function Check(params : Checker) {
         const errors = [];
 
         // Checks body request
-        params.body && Object.keys(params.body).forEach(key => {
-
-            const Property2Check = params.body[key];
-            const Property = req.body[key];
-
-            if (!Property2Check.nullable && Property == null) {
-                errors.push(`missing property "${key}" in body request`);
-            }
-
-            const propertyType = typeof Property;
-
-            if (["string", "number", "boolean"].includes(propertyType)) {
-                if (Property2Check.type === "date") {
-                    isNaN(Date.parse(Property)) && errors.push(`property "${key}" expected type ${Property2Check.type} but got invalid date at body request`);
-                } else {
-                    propertyType != Property2Check.type && errors.push(`property "${key}" expected type ${Property2Check.type} but got type ${propertyType} at body request`);
-                }
-            }
-
-            if (propertyType === "object") {
-                switch (Property2Check.type) {
-                    case "list": {
-                        !(Property instanceof Array) && errors.push(`property "${key}" expected type ${Property2Check.type} but got type ${propertyType} at body request`);
-                        break;
-                    }
-                    default: {}
-                }
-            }
-
-            
-
-            if (Property2Check.validator) {
-                // checks if property exists
-                Property && !Property2Check.validator(Property) && errors.push(`property "${key}" failed at validator function at body request`);
-            }
-
-        });
+        params.body && CheckBody(req.body, params.body, errors);
 
         // Checks query request
         params.query && Object.keys(params.query).forEach(key => {
