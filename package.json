@@ -1,4 +1,7 @@
 {
+  "name": "router-checker",
+  "description": "middlaware that checks the request",
+  "version": "1.0.0",
   "devDependencies": {
     "@types/express": "^4.17.13",
     "@types/jest": "^27.0.2",
