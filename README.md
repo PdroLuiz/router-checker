@@ -98,7 +98,7 @@ export const createUserChecker : Checker = {
 };
 ```
 
-###validator function
+### validator function
 
 In case you need more complex validation, like checking the length of a string or the validation of an email you can use the validator function, it's a function that receives the value in the param and return a boolean, in the case that the value returned is true, the validator will let it pass, if its false, it'll throw an error.
 
